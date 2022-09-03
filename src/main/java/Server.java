@@ -1,41 +1,86 @@
-import java.io.DataInputStream;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class Server {
-    static ServerSocket socket;
-    static Socket clientSocket;
-
     public static void main(String[] args) {
 
         new Tray();
 
-        try {
-            socket = new ServerSocket(1755);
+        StartServer();
+    }
 
-            WaitForMessage();
+    private static void StartServer() {
+        HttpServer server;
+        try {
+            server = HttpServer.create(new InetSocketAddress(1755), 0);
+            server.createContext("/command", new MyHandler());
+            server.setExecutor(null); // creates a default executor
+            server.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void SendResponse(HttpExchange exchange, String response, int httpCode) {
+        try {
+            exchange.sendResponseHeaders(httpCode, response.length());
+            OutputStream os = exchange.getResponseBody();
+
+            System.out.println(response);
+
+            os.write(response.getBytes());
+            os.flush();
+            os.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
     }
 
-    private static void WaitForMessage() throws IOException {
-        clientSocket = socket.accept();       //This is blocking. It will wait.
-        DataInputStream DIS = new DataInputStream(clientSocket.getInputStream());
+    private static Command getRequestBody(InputStream inputStream) throws IOException {
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        for (int length; (length = inputStream.read(buffer)) != -1; ) {
+            result.write(buffer, 0, length);
+        }
 
-        String incomingCommand = DIS.readUTF();
+        JSONObject jsonObject = new JSONObject(result.toString());
 
-        System.out.println(incomingCommand);
+        return new Command(jsonObject.getString("command"));
+    }
 
-        Runtime.getRuntime().exec(incomingCommand.replaceAll("[+,\"]", ""));
+    private static class MyHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) {
+            try {
+                if (exchange.getRequestMethod().equals("POST")) {
+                    String[] command = getRequestBody(exchange.getRequestBody()).command().replaceAll("[,\"]", "").split(" ");
 
-        WaitForMessage();
+                    final List<String> commands = new ArrayList<>(Arrays.asList(command));
 
-//        clientSocket.close();
-//        socket.close();
+                    ProcessBuilder pb = new ProcessBuilder(commands).inheritIO();
+                    pb.start();
+
+                    SendResponse(exchange, "Success", 200);
+                } else {
+                    SendResponse(exchange, "Method Not Allowed", 405);
+                }
+            } catch (IOException | NullPointerException e) {
+                SendResponse(exchange, "Bad Request", 400);
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+        }
     }
 }
