@@ -1,6 +1,7 @@
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import commands.MediaKeys;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
@@ -24,7 +25,8 @@ public class Server {
         HttpServer server;
         try {
             server = HttpServer.create(new InetSocketAddress(1755), 0);
-            server.createContext("/command", new MyHandler());
+            server.createContext("/command", new CommandHandler());
+            server.createContext("/media", new MediaHandler());
             server.setExecutor(null); // creates a default executor
             server.start();
         } catch (IOException e) {
@@ -48,7 +50,7 @@ public class Server {
         }
     }
 
-    private static Command getRequestBody(InputStream inputStream) throws IOException {
+    private static Request getRequestBody(InputStream inputStream) throws IOException {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
         byte[] buffer = new byte[1024];
         for (int length; (length = inputStream.read(buffer)) != -1; ) {
@@ -57,20 +59,45 @@ public class Server {
 
         JSONObject jsonObject = new JSONObject(result.toString());
 
-        return new Command(jsonObject.getString("command"));
+        return new Request(jsonObject.getString("request"));
     }
 
-    private static class MyHandler implements HttpHandler {
+    private static class CommandHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) {
             try {
                 if (exchange.getRequestMethod().equals("POST")) {
-                    String[] command = getRequestBody(exchange.getRequestBody()).command().replaceAll("[,\"]", "").split(" ");
+                    String[] command = getRequestBody(exchange.getRequestBody()).request().replaceAll("[,\"]", "").split(" ");
 
                     final List<String> commands = new ArrayList<>(Arrays.asList(command));
 
                     ProcessBuilder pb = new ProcessBuilder(commands).inheritIO();
                     pb.start();
+
+                    SendResponse(exchange, "Success", 200);
+                } else {
+                    SendResponse(exchange, "Method Not Allowed", 405);
+                }
+            } catch (IOException | NullPointerException e) {
+                SendResponse(exchange, "Bad Request", 400);
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    private static class MediaHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) {
+            try {
+                if (exchange.getRequestMethod().equals("POST")) {
+                    String command = getRequestBody(exchange.getRequestBody()).request();
+
+                    switch (command) {
+                        case "play/stop" -> MediaKeys.songPlayPause();
+                        case "previous" -> MediaKeys.songPrevious();
+                        case "next" -> MediaKeys.songNext();
+                    }
 
                     SendResponse(exchange, "Success", 200);
                 } else {
