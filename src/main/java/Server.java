@@ -40,7 +40,7 @@ public class Server {
             exchange.sendResponseHeaders(httpCode, response.length());
             OutputStream os = exchange.getResponseBody();
 
-            System.out.println(response);
+            System.out.print(response);
 
             os.write(response.getBytes());
             os.flush();
@@ -75,6 +75,7 @@ public class Server {
                     pb.start();
 
                     SendResponse(exchange, "Success", 200);
+                    System.out.println(" : " + commands);
                 } else {
                     SendResponse(exchange, "Method Not Allowed", 405);
                 }
@@ -97,9 +98,12 @@ public class Server {
                         case "play/stop" -> MediaKeys.songPlayPause();
                         case "previous" -> MediaKeys.songPrevious();
                         case "next" -> MediaKeys.songNext();
+                        case "volume_up" -> MediaKeys.volumeUp();
+                        case "volume_down" -> MediaKeys.volumeDown();
                     }
 
                     SendResponse(exchange, "Success", 200);
+                    System.out.println(" : " + command);
                 } else {
                     SendResponse(exchange, "Method Not Allowed", 405);
                 }
