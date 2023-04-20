@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.util.Objects;
 
 public class Tray {
+    public TrayIcon trayIcon;
+
     public Tray() {
         if (!SystemTray.isSupported()) {
             System.out.println("SystemTray is not supported");
@@ -12,7 +14,6 @@ public class Tray {
         }
 
         PopupMenu popup = new PopupMenu();
-        TrayIcon trayIcon;
         try {
             BufferedImage trayIconImage = ImageIO.read(Objects.requireNonNull(Tray.class.getResource("icon.png")));
             int trayIconWidth = new TrayIcon(trayIconImage).getSize().width;

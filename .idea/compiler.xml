@@ -9,8 +9,5 @@
         <module name="PCCommanderServer" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="PCCommanderServer" target="18" />
-    </bytecodeTargetLevel>
   </component>
 </project>

@@ -4,6 +4,8 @@ import com.sun.net.httpserver.HttpServer;
 import commands.MediaKeys;
 import org.json.JSONObject;
 
+import java.awt.*;
+import java.awt.datatransfer.StringSelection;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,9 +16,10 @@ import java.util.Arrays;
 import java.util.List;
 
 public class Server {
+    private static Tray tray;
+    
     public static void main(String[] args) {
-
-        new Tray();
+        tray = new Tray();
 
         StartServer();
     }
@@ -26,6 +29,7 @@ public class Server {
         try {
             server = HttpServer.create(new InetSocketAddress(1755), 0);
             server.createContext("/command", new CommandHandler());
+            server.createContext("/text", new TextHandler());
             server.createContext("/media", new MediaHandler());
             server.setExecutor(null); // creates a default executor
             server.start();
@@ -39,8 +43,6 @@ public class Server {
         try {
             exchange.sendResponseHeaders(httpCode, response.length());
             OutputStream os = exchange.getResponseBody();
-
-            System.out.print(response);
 
             os.write(response.getBytes());
             os.flush();
@@ -75,7 +77,6 @@ public class Server {
                     pb.start();
 
                     SendResponse(exchange, "Success", 200);
-                    System.out.println(" : " + commands);
                 } else {
                     SendResponse(exchange, "Method Not Allowed", 405);
                 }
@@ -84,6 +85,33 @@ public class Server {
                 e.printStackTrace();
                 throw new RuntimeException(e);
             }
+        }
+    }
+
+    private static class TextHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) {
+            try {
+                if (exchange.getRequestMethod().equals("POST")) {
+                    String text = getRequestBody(exchange.getRequestBody()).request();
+
+                    Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);
+
+                    displayTray("Copied to clipboard");
+                } else {
+                    SendResponse(exchange, "Method Not Allowed", 405);
+                }
+            } catch (IOException | NullPointerException e) {
+                SendResponse(exchange, "Bad Request", 400);
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            } catch (AWTException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        public void displayTray(String message) throws AWTException {
+            tray.trayIcon.displayMessage("PC Commander Server", message, TrayIcon.MessageType.INFO);
         }
     }
 
@@ -103,7 +131,6 @@ public class Server {
                     }
 
                     SendResponse(exchange, "Success", 200);
-                    System.out.println(" : " + command);
                 } else {
                     SendResponse(exchange, "Method Not Allowed", 405);
                 }
