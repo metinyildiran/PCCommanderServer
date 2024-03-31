@@ -122,13 +122,7 @@ public class Server {
                 if (exchange.getRequestMethod().equals("POST")) {
                     String command = getRequestBody(exchange.getRequestBody()).request();
 
-                    switch (command) {
-                        case "play/stop" -> MediaKeys.songPlayPause();
-                        case "previous" -> MediaKeys.songPrevious();
-                        case "next" -> MediaKeys.songNext();
-                        case "volume_up" -> MediaKeys.volumeUp();
-                        case "volume_down" -> MediaKeys.volumeDown();
-                    }
+                    MediaKeys.executeMediaKey(command);
 
                     SendResponse(exchange, "Success", 200);
                 } else {

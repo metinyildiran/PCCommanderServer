@@ -24,4 +24,14 @@ public class MediaKeys {
     public static native void songPlayPause();
 
     public static native void mediaStop();
+
+    public static void executeMediaKey(String command) {
+        switch (command) {
+            case "play/stop" -> MediaKeys.songPlayPause();
+            case "previous" -> MediaKeys.songPrevious();
+            case "next" -> MediaKeys.songNext();
+            case "volume_up" -> MediaKeys.volumeUp();
+            case "volume_down" -> MediaKeys.volumeDown();
+        }
+    }
 }
