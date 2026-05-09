@@ -6,6 +6,7 @@ import org.json.JSONObject;
 
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
+import java.awt.event.KeyEvent;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -96,6 +97,16 @@ public class Server {
                     String text = getRequestBody(exchange.getRequestBody()).request();
 
                     Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);
+
+                    Robot robot = new Robot();
+
+                    robot.delay(100);
+
+                    robot.keyPress(KeyEvent.VK_CONTROL);
+                    robot.keyPress(KeyEvent.VK_V);
+
+                    robot.keyRelease(KeyEvent.VK_V);
+                    robot.keyRelease(KeyEvent.VK_CONTROL);
 
                     displayTray("Copied to clipboard");
                 } else {
